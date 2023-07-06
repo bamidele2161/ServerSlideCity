@@ -2,10 +2,12 @@ const express = require("express");
 const User = require("../model/UserModel");
 const asyncHandler = require("express-async-handler");
 const bcyrpt = require("bcrypt");
-const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 
 // creating a register endpoint
+// check if user already exists
+// hashed the password
+// create a new user to the database
 
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password, firstName, lastName, phoneNumber } =
@@ -20,12 +22,8 @@ const registerUser = asyncHandler(async (req, res) => {
   )
     res.status(400).json({ error: "all fields are mandatory" });
 
-  //checking if user already exists
-
   const availableUser = await User.findOne({ email });
   if (availableUser) res.status(400).json({ error: "user already exists" });
-
-  //hashed password
 
   const hashedPassword = await bcyrpt.hash(password, 10);
   console.log(hashedPassword);
@@ -49,13 +47,19 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 //Creating a login endpoint
+// check if user exists in the database
+// compare password provided with hashed password
+// generate access token
+
 const userLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     res.status(400).json({ error: "all fields are mandatory" });
   const user = await User.findOne({ email });
+  if (!user) {
+    res.status(404).json({ error: "user not found" });
+  }
 
-  //comapring password with hashed password
   if (user && (await bcyrpt.compare(password, user.password))) {
     const accessToken = await jwt.sign(
       {
@@ -75,6 +79,10 @@ const userLogin = asyncHandler(async (req, res) => {
 });
 
 // Reset Password Endpoint
+// check if email is in the database
+// generate reset token
+// save reset token in user document
+
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
@@ -88,11 +96,13 @@ const forgotPassword = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: "User does not exist." });
   }
 
-  // Generate reset token
-  const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetToken = await jwt.sign(
+    { _id: user.id },
+    process.env.RESET_TOKEN_SECRET,
+    { expiresIn: "30m" }
+  );
   console.log("resetToken", resetToken);
 
-  // Save reset token in user document
   user.token = resetToken;
   await user.save();
 
@@ -102,6 +112,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
 });
 
 // reset password endpoint
+// check if user exist in the dataase
+// verify if the token provided is the same as token in the database
+// hash the provided password
+// update the user and clear the token
+
 const resetPassword = asyncHandler(async (req, res) => {
   const { email, token, password } = req.body;
 
@@ -111,33 +126,38 @@ const resetPassword = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
   if (!user) return res.status(400).json({ error: "User not found." });
 
-  const isValidToken = await bcyrpt.compare(token, user.token);
-  console.log(isValidToken);
-  if (user && isValidToken) {
-    const hashedPassword = await bcyrpt.hash(password, 10);
+  if (token) {
+    jwt.verify(token, process.env.RESET_TOKEN_SECRET, (err, decoded) => {
+      if (err) {
+        res.status(400);
+        throw new Error("invalid or expired token");
+      }
+      req.user = decoded.user;
+    });
+  }
 
-    // Update the user's password and clear the token
-    const updatedUser = await User.findOneAndUpdate(
-      { email },
-      { password: hashedPassword, token: "" },
-      { new: true }
-    );
+  const hashedPassword = await bcyrpt.hash(password, 10);
 
-    if (updatedUser) {
-      return res.status(200).json({
-        data: updatedUser,
-        message: "Password reset successfully.",
-      });
-    } else {
-      return res.status(500).json({
-        error: "Failed to update the user's password. Please try again.",
-      });
-    }
+  const updatedUser = await User.findOneAndUpdate(
+    { email },
+    { password: hashedPassword, token: "" },
+    { new: true }
+  );
+  console.log(updatedUser);
+  if (updatedUser) {
+    return res.status(200).json({
+      _id: user.id,
+      email: user.email,
+      message: "Password reset successfully.",
+    });
   } else {
-    return res.status(400).json({ error: "Invalid or expired token." });
+    return res.status(500).json({
+      error: "Failed to update the user's password. Please try again.",
+    });
   }
 });
 
+// creating a update table endpoint for databasae
 const test = async (req, res) => {
   try {
     const update = await User.updateMany({}, { $set: { token: "" } });
