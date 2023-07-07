@@ -3,6 +3,7 @@ const User = require("../model/UserModel");
 const asyncHandler = require("express-async-handler");
 const bcyrpt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const sendEMail = require("../services/sendMail");
 
 // creating a register endpoint
 // check if user already exists
@@ -85,7 +86,7 @@ const userLogin = asyncHandler(async (req, res) => {
 
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
-
+  console.log("logggggg");
   if (!email) {
     return res.status(400).json({ error: "Email is required." });
   }
@@ -103,11 +104,19 @@ const forgotPassword = asyncHandler(async (req, res) => {
   );
   console.log("resetToken", resetToken);
 
-  user.token = resetToken;
-  await user.save();
-
-  console.log("user", user);
-
+  // user.token = resetToken;
+  const update = await User.findOneAndUpdate(
+    { email },
+    {
+      $set: {
+        token: resetToken,
+      },
+    }
+  );
+  console.log(update);
+  // console.log("user", user);
+  const link = `${process.env.CLIENT_URL}/PasswordReset?token=${resetToken}&id=${user.id}`;
+  sendEMail(user.email, "Password Reset", link);
   return res.status(200).json({ message: "Token sent to the provided email." });
 });
 
