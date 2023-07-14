@@ -42,6 +42,7 @@ const registerStaff = asyncHandler(async (req, res) => {
     phoneNumber: staff.phoneNumber,
     message: "Staff created successfully",
   });
+  next(error);
 });
 
 // creating a login endpoint for staff
@@ -74,6 +75,7 @@ const staffLogin = asyncHandler(async (req, res) => {
   } else {
     res.status(401).json({ error: "email or password is invalid" });
   }
+  next(error);
 });
 
 module.exports = { registerStaff, staffLogin };
