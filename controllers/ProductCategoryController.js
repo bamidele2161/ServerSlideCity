@@ -1,4 +1,3 @@
-const express = require("express");
 const ProductCategory = require("../model/ProductCategoryModel");
 const asyncHandler = require("express-async-handler");
 

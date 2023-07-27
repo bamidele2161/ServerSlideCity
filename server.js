@@ -4,6 +4,7 @@ const connectDB = require("./config/db");
 const userRouter = require("./routes/userRoute");
 const staffRouter = require("./routes/StaffRoute");
 const productCategoryRouter = require("./routes/ProductCategoryRoute");
+const productRouter = require("./routes/ProductRoute");
 const errorHandler = require("./middleware/errorHandling");
 const dotenv = require("dotenv");
 dotenv.config({ path: __dirname + "/.env" });
@@ -13,6 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/user", userRouter);
 app.use("/staff", staffRouter);
 app.use("/productCategory", productCategoryRouter);
+app.use("/product", productRouter);
 connectDB();
 
 const Port = process.env.PORT || 5000;
