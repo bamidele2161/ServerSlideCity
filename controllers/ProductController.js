@@ -34,7 +34,7 @@ const addProduct = asyncHandler(async (req, res) => {
 // creating a get all product end point
 
 const getProduct = asyncHandler(async (req, res) => {
-  const product = await Product.find();
+  const product = await Product.find().populate("category_id");
 
   if (!product) {
     return res.status(400).json({ error: "cannot fetch all products" });

@@ -25,7 +25,7 @@ const addProductCategory = asyncHandler(async (req, res) => {
 // creating a get all product category endpoint
 
 const getProductCategory = asyncHandler(async (req, res) => {
-  const productCategory = await ProductCategory.find();
+  const productCategory = await ProductCategory.find().populate("category_id");
   if (!productCategory)
     res.status(400).json({ error: "cannot find all product category" });
   res.status(200).json({
